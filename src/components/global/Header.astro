@@ -1,0 +1,194 @@
+---
+import ThemeToggle from './ThemeToggle.astro';
+
+interface Props { lang: string; }
+const { lang } = Astro.props;
+
+const data = lang === 'en'
+  ? await import('@data/en.json')
+  : await import('@data/es.json');
+const nav = data.nav;
+const langPath = lang === 'es' ? '/en/' : '/';
+---
+
+<header class="fixed top-0 left-0 right-0 z-50 glass" id="main-header">
+  <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+    <!-- Logo -->
+    <a href={lang === 'en' ? '/en/' : '/'} class="flex items-center gap-2 group">
+      <span class="font-mono text-sm font-medium text-accent-400 dark:text-accent-200 group-hover:text-accent-600 dark:group-hover:text-accent-100 transition-colors">
+        null<span class="text-gray-900 dark:text-gray-100">garo</span>
+      </span>
+      <span class="w-1.5 h-1.5 rounded-full bg-accent-400 dark:bg-accent-200 group-hover:animate-pulse-glow inline-block"></span>
+    </a>
+
+    <!-- Desktop Nav -->
+    <nav class="hidden md:flex items-center gap-8" id="desktop-nav">
+      <a href="#experience" class="nav-link text-sm text-gray-600 dark:text-gray-400 hover:text-accent-400 dark:hover:text-accent-200 transition-colors">{nav.experience}</a>
+      <a href="#projects" class="nav-link text-sm text-gray-600 dark:text-gray-400 hover:text-accent-400 dark:hover:text-accent-200 transition-colors">{nav.projects}</a>
+      <a href="#about" class="nav-link text-sm text-gray-600 dark:text-gray-400 hover:text-accent-400 dark:hover:text-accent-200 transition-colors">{nav.about}</a>
+      <a href="#contact" class="nav-link text-sm text-gray-600 dark:text-gray-400 hover:text-accent-400 dark:hover:text-accent-200 transition-colors">{nav.contact}</a>
+      <a href={lang === 'en' ? '/en/blog' : '/blog'} class="text-sm text-gray-600 dark:text-gray-400 hover:text-accent-400 dark:hover:text-accent-200 transition-colors">{nav.blog}</a>
+    </nav>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+      <a href={langPath} id="lang-toggle" class="hidden md:inline-flex text-xs font-mono font-medium px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-accent-400 dark:hover:border-accent-200 hover:text-accent-400 dark:hover:text-accent-200 transition-all">
+        {nav.switchLang}
+      </a>
+      <div class="hidden md:block"><ThemeToggle /></div>
+      <!-- Hamburger button (mobile only) -->
+      <button id="menu-toggle" class="md:hidden relative w-9 h-9 flex flex-col items-center justify-center gap-[5px] rounded-xl border border-gray-200 dark:border-gray-700 hover:border-accent-400 dark:hover:border-accent-200 transition-colors" aria-label="Toggle menu">
+        <span class="menu-bar block w-4 h-[1.5px] bg-gray-700 dark:bg-gray-300 rounded-full transition-all duration-300 origin-center"></span>
+        <span class="menu-bar block w-4 h-[1.5px] bg-gray-700 dark:bg-gray-300 rounded-full transition-all duration-300"></span>
+        <span class="menu-bar block w-4 h-[1.5px] bg-gray-700 dark:bg-gray-300 rounded-full transition-all duration-300 origin-center"></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile menu — sibling to header, outside glass stacking context -->
+<div id="mobile-menu"
+  class="fixed inset-0 z-40 md:hidden pointer-events-none"
+  aria-hidden="true">
+
+  <!-- Backdrop -->
+  <div id="mobile-backdrop"
+    class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-300">
+  </div>
+
+  <!-- Drawer panel (slides in from right) -->
+  <div id="mobile-drawer"
+    class="absolute top-0 right-0 h-full w-[min(80vw,320px)] flex flex-col translate-x-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+    style="background: var(--color-bg-card); border-left: 1px solid var(--color-border);">
+
+    <!-- Drawer header -->
+    <div class="h-16 flex items-center justify-between px-6 border-b border-[var(--color-border)] flex-shrink-0">
+      <a href={lang === 'en' ? '/en/' : '/'} class="flex items-center gap-2">
+        <span class="font-mono text-sm font-medium text-accent-400 dark:text-accent-200">
+          null<span class="text-gray-900 dark:text-gray-100">garo</span>
+        </span>
+        <span class="w-1.5 h-1.5 rounded-full bg-accent-400 dark:bg-accent-200 inline-block"></span>
+      </a>
+      <button id="menu-close" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400" aria-label="Close menu">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Nav links -->
+    <nav class="flex-1 overflow-y-auto px-4 py-6">
+      <a href="#experience" class="mobile-nav-link group flex items-center gap-3 px-3 py-3.5 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:text-accent-400 dark:hover:text-accent-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all mb-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-accent-400/40 dark:bg-accent-200/40 group-hover:bg-accent-400 dark:group-hover:bg-accent-200 transition-colors flex-shrink-0"></span>
+        {nav.experience}
+      </a>
+      <a href="#projects" class="mobile-nav-link group flex items-center gap-3 px-3 py-3.5 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:text-accent-400 dark:hover:text-accent-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all mb-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-accent-400/40 dark:bg-accent-200/40 group-hover:bg-accent-400 dark:group-hover:bg-accent-200 transition-colors flex-shrink-0"></span>
+        {nav.projects}
+      </a>
+      <a href="#about" class="mobile-nav-link group flex items-center gap-3 px-3 py-3.5 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:text-accent-400 dark:hover:text-accent-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all mb-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-accent-400/40 dark:bg-accent-200/40 group-hover:bg-accent-400 dark:group-hover:bg-accent-200 transition-colors flex-shrink-0"></span>
+        {nav.about}
+      </a>
+      <a href="#contact" class="mobile-nav-link group flex items-center gap-3 px-3 py-3.5 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:text-accent-400 dark:hover:text-accent-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all mb-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-accent-400/40 dark:bg-accent-200/40 group-hover:bg-accent-400 dark:group-hover:bg-accent-200 transition-colors flex-shrink-0"></span>
+        {nav.contact}
+      </a>
+      <a href={lang === 'en' ? '/en/blog' : '/blog'} class="mobile-nav-link group flex items-center gap-3 px-3 py-3.5 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:text-accent-400 dark:hover:text-accent-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all mb-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-accent-400/40 dark:bg-accent-200/40 group-hover:bg-accent-400 dark:group-hover:bg-accent-200 transition-colors flex-shrink-0"></span>
+        {nav.blog}
+      </a>
+    </nav>
+
+    <!-- Drawer footer: theme + lang -->
+    <div class="flex-shrink-0 px-6 py-5 border-t border-[var(--color-border)] flex items-center justify-between">
+      <a href={langPath} class="text-xs font-mono font-medium px-3 py-1.5 rounded-lg border border-[var(--color-border)] text-gray-600 dark:text-gray-400 hover:border-accent-400 dark:hover:border-accent-200 hover:text-accent-400 dark:hover:text-accent-200 transition-all">
+        {nav.switchLang}
+      </a>
+      <ThemeToggle />
+    </div>
+  </div>
+</div>
+
+<script>
+  function initHeader() {
+    const toggle   = document.getElementById('menu-toggle');
+    const closeBtn = document.getElementById('menu-close');
+    const menu     = document.getElementById('mobile-menu');
+    const backdrop = document.getElementById('mobile-backdrop');
+    const drawer   = document.getElementById('mobile-drawer');
+    const bars     = toggle?.querySelectorAll('.menu-bar');
+    const mobileLinks = document.querySelectorAll('.mobile-nav-link');
+
+    function openMenu() {
+      if (!menu || !backdrop || !drawer) return;
+      menu.classList.remove('pointer-events-none');
+      menu.setAttribute('aria-hidden', 'false');
+      // Trigger transitions (rAF ensures class changes animate)
+      requestAnimationFrame(() => {
+        backdrop.style.opacity = '1';
+        drawer.style.transform = 'translateX(0)';
+      });
+      document.body.style.overflow = 'hidden';
+      if (bars) {
+        (bars[0] as HTMLElement).style.cssText = 'transform: translateY(6.5px) rotate(45deg)';
+        (bars[1] as HTMLElement).style.cssText = 'opacity: 0; transform: scaleX(0)';
+        (bars[2] as HTMLElement).style.cssText = 'transform: translateY(-6.5px) rotate(-45deg)';
+      }
+    }
+
+    function closeMenu() {
+      if (!menu || !backdrop || !drawer) return;
+      backdrop.style.opacity = '0';
+      drawer.style.transform = 'translateX(100%)';
+      setTimeout(() => {
+        menu.classList.add('pointer-events-none');
+        menu.setAttribute('aria-hidden', 'true');
+      }, 300);
+      document.body.style.overflow = '';
+      if (bars) {
+        (bars[0] as HTMLElement).style.cssText = '';
+        (bars[1] as HTMLElement).style.cssText = '';
+        (bars[2] as HTMLElement).style.cssText = '';
+      }
+    }
+
+    toggle?.addEventListener('click', () => {
+      menu?.classList.contains('pointer-events-none') ? openMenu() : closeMenu();
+    });
+    closeBtn?.addEventListener('click', closeMenu);
+    backdrop?.addEventListener('click', closeMenu);
+    mobileLinks.forEach(link => link.addEventListener('click', closeMenu));
+
+    // Active section tracking
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav-link');
+
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          navLinks.forEach(l => l.classList.remove('text-accent-400', 'dark:text-accent-200'));
+          const active = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+          active?.classList.add('text-accent-400', 'dark:text-accent-200');
+        }
+      });
+    }, { threshold: 0.3 });
+
+    sections.forEach(s => obs.observe(s));
+
+    document.getElementById('lang-toggle')?.addEventListener('click', () => {
+      sessionStorage.setItem('scrollRestore', String(window.scrollY));
+    });
+  }
+
+  document.addEventListener('astro:after-swap', () => {
+    const y = sessionStorage.getItem('scrollRestore');
+    if (y !== null) {
+      sessionStorage.removeItem('scrollRestore');
+      window.scrollTo({ top: parseInt(y), behavior: 'instant' });
+    }
+    initHeader();
+  });
+
+  initHeader();
+</script>

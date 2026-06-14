@@ -1,0 +1,31 @@
+---
+const { url, title, description, pubDate, updDate, image, lang } = Astro.props;
+
+const data = lang === 'en'
+  ? await import('@data/en.json')
+  : await import('@data/es.json');
+const { published, updated } = data.blog.authorpreview;
+---
+<li class="mb-10">
+  <a
+    href={url}
+    class="flex flex-col sm:flex-row sm:items-center gap-5 p-5 rounded-2xl border border-[var(--color-border)] hover:border-accent-400/40 dark:hover:border-accent-200/40 transition-all duration-300 group hover:-translate-y-0.5"
+    style="background: var(--color-bg-card);"
+  >
+    {image && (
+      <img
+        src={image}
+        alt={title}
+        class="w-full sm:w-40 h-28 sm:h-24 object-cover rounded-xl flex-shrink-0"
+      />
+    )}
+    <div class="flex-1 min-w-0">
+      <h2 class="font-display text-lg font-semibold mb-1 group-hover:text-accent-400 dark:group-hover:text-accent-200 transition-colors truncate">{title}</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3 leading-relaxed line-clamp-2">{description}</p>
+      <div class="flex flex-wrap items-center gap-3 text-xs text-gray-400 dark:text-gray-500 font-mono">
+        <span>{published} <time>{pubDate}</time></span>
+        {updDate && <span>· {updated} <time>{updDate}</time></span>}
+      </div>
+    </div>
+  </a>
+</li>

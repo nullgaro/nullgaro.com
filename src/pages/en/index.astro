@@ -1,0 +1,17 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Hero from '../../components/hero/Hero.astro';
+import ExperienceConstellation from '../../components/experience/ExperienceConstellation.astro';
+import Projects from '../../components/projects/Projects.astro';
+import AboutMe from '../../components/about/AboutMe.astro';
+import Contact from '../../components/contact/Contact.astro';
+
+import data from '@data/en.json';
+---
+<Layout title={data.meta.title} description={data.meta.description} lang="en">
+  <Hero data={data} />
+  <ExperienceConstellation data={data} />
+  <Projects data={data} />
+  <AboutMe data={data} />
+  <Contact data={data} />
+</Layout>

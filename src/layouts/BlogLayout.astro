@@ -1,0 +1,138 @@
+---
+import { ViewTransitions } from 'astro:transitions';
+import Header from '../components/global/Header.astro';
+import Footer from '../components/global/Footer.astro';
+import BlogSidebar from '../components/blog/BlogSidebar.astro';
+import '../styles/global.css';
+
+interface Props {
+  lang: string;
+  title?: string;
+  description?: string;
+  tags?: string[];
+}
+
+const { lang, tags } = Astro.props;
+
+const data = lang === 'en'
+  ? await import('@data/en.json')
+  : await import('@data/es.json');
+
+const title = Astro.props.title || data.blog.title;
+const description = Astro.props.description || data.blog.description;
+---
+<!doctype html>
+<html lang={lang} class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content={description} />
+  <meta name="author" content="Daniel Milenov" />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="sitemap" href="/sitemap-index.xml" />
+  <title>{title}</title>
+  <ViewTransitions />
+  <script is:inline>
+    const theme = (() => {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
+        return localStorage.getItem('theme');
+      }
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    })();
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</head>
+<body class="bg-surface-light dark:bg-surface-dark text-gray-900 dark:text-gray-100 transition-colors duration-300">
+  <canvas id="constellation-bg" class="fixed inset-0 pointer-events-none z-0 opacity-30 dark:opacity-50"></canvas>
+
+  <Header lang={lang} />
+
+  <main class="relative z-10 pt-24 pb-16">
+    <div class="max-w-5xl mx-auto px-6 sm:px-8">
+      <!-- Blog title heading -->
+      <div class="mb-12 text-center" data-animate>
+        <h1 class="font-display text-section gradient-text inline-block">{title}</h1>
+      </div>
+
+      <!-- Two-column layout: content + sidebar -->
+      <div class="flex flex-col lg:flex-row gap-10">
+        <div class="flex-1 min-w-0">
+          <slot />
+        </div>
+        <div class="lg:w-60 flex-shrink-0">
+          <BlogSidebar lang={lang} tags={tags} />
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer lang={lang} />
+
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('[data-animate]').forEach((el) => observer.observe(el));
+    document.addEventListener('astro:after-swap', () => {
+      document.querySelectorAll('[data-animate]').forEach((el) => observer.observe(el));
+    });
+  </script>
+
+  <script>
+    function initConstellation() {
+      const canvas = document.getElementById('constellation-bg') as HTMLCanvasElement;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      let animationId: number;
+      const particles: { x: number; y: number; vx: number; vy: number; r: number }[] = [];
+      const maxDist = 120;
+      const particleCount = Math.min(60, Math.floor(window.innerWidth / 20));
+      function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight * 3; }
+      function createParticles() {
+        particles.length = 0;
+        for (let i = 0; i < particleCount; i++) {
+          particles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3, r: Math.random() * 1.5 + 0.5 });
+        }
+      }
+      function draw() {
+        ctx!.clearRect(0, 0, canvas.width, canvas.height);
+        const isDark = document.documentElement.classList.contains('dark');
+        const dotColor = isDark ? 'rgba(127,119,221,' : 'rgba(83,74,183,';
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+          if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+          ctx!.beginPath(); ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx!.fillStyle = dotColor + '0.6)'; ctx!.fill();
+          for (let j = i + 1; j < particles.length; j++) {
+            const p2 = particles[j];
+            const dx = p.x - p2.x, dy = p.y - p2.y, dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < maxDist) {
+              ctx!.beginPath(); ctx!.moveTo(p.x, p.y); ctx!.lineTo(p2.x, p2.y);
+              ctx!.strokeStyle = dotColor + (0.15 * (1 - dist / maxDist)) + ')';
+              ctx!.lineWidth = 0.5; ctx!.stroke();
+            }
+          }
+        }
+        animationId = requestAnimationFrame(draw);
+      }
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { canvas.style.display = 'none'; return; }
+      resize(); createParticles(); draw();
+      window.addEventListener('resize', () => { cancelAnimationFrame(animationId); resize(); createParticles(); draw(); });
+    }
+    initConstellation();
+    document.addEventListener('astro:after-swap', initConstellation);
+  </script>
+</body>
+</html>

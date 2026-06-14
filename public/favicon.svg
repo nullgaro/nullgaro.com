@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="7" fill="#0C0C0F"/>
+  <text x="5" y="22" font-family="'JetBrains Mono', 'Fira Mono', monospace" font-size="16" font-weight="600" fill="#AFA9EC">N</text>
+  <circle cx="26" cy="18" r="3" fill="#AFA9EC"/>
+</svg>

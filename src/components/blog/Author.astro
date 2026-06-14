@@ -1,0 +1,17 @@
+---
+const { lang, pubDate, updDate } = Astro.props;
+
+const data = lang === 'en'
+  ? await import('@data/en.json')
+  : await import('@data/es.json');
+const { at, updated } = data.blog.authorpost;
+---
+<div class="flex items-center gap-3 text-sm text-gray-400 dark:text-gray-500 font-mono mb-6">
+  <a href={lang === 'en' ? '/en/' : '/'} class="flex items-center gap-2 hover:text-accent-400 dark:hover:text-accent-200 transition-colors">
+    <img src="/photo.webp" alt="Nullgaro" class="w-7 h-7 rounded-full object-cover border border-[var(--color-border)]" />
+    <span class="font-medium text-gray-700 dark:text-gray-300">Nullgaro</span>
+  </a>
+  <span>·</span>
+  <span>{at} <time>{pubDate}</time></span>
+  {updDate && <><span>·</span><span>{updated} <time>{updDate}</time></span></>}
+</div>

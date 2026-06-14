@@ -1,0 +1,208 @@
+---
+import { ViewTransitions } from 'astro:transitions';
+import Header from '../components/global/Header.astro';
+import Footer from '../components/global/Footer.astro';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+  lang?: string;
+}
+
+const { title, description, lang = 'es' } = Astro.props;
+---
+<!doctype html>
+<html lang={lang} class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content={description} />
+  <meta name="author" content="Daniel Milenov" />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://nullgaro.com" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="sitemap" href="/sitemap-index.xml" />
+  <title>{title}</title>
+  <ViewTransitions />
+  <script is:inline>
+    // Theme initialization (before paint)
+    const theme = (() => {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
+        return localStorage.getItem('theme');
+      }
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    })();
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</head>
+<body class="bg-surface-light dark:bg-surface-dark text-gray-900 dark:text-gray-100 transition-colors duration-300">
+  <!-- Constellation background -->
+  <canvas id="constellation-bg" class="fixed inset-0 pointer-events-none z-0 opacity-[0.65] dark:opacity-[0.85]"></canvas>
+
+  <Header lang={lang} />
+
+  <main class="relative z-10">
+    <slot />
+  </main>
+
+  <Footer lang={lang} />
+
+  <!-- Scroll-triggered animation observer -->
+  <script>
+    function initAnimations() {
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.05 });
+
+      document.querySelectorAll('[data-animate], [data-animate-left]').forEach((el) => {
+        // Already visible in viewport — show immediately
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight + 20) {
+          el.classList.add('visible');
+        } else {
+          obs.observe(el);
+        }
+      });
+    }
+
+    initAnimations();
+    document.addEventListener('astro:after-swap', initAnimations);
+  </script>
+
+  <!-- Constellation background canvas -->
+  <script>
+    function initConstellation() {
+      const canvas = document.getElementById('constellation-bg') as HTMLCanvasElement;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      let animationId: number;
+      const particles: { x: number; y: number; vx: number; vy: number; r: number }[] = [];
+      const maxDist = 150;
+      const particleCount = Math.min(80, Math.floor(window.innerWidth / 14));
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight * 3;
+      }
+
+      function createParticles() {
+        particles.length = 0;
+        for (let i = 0; i < particleCount; i++) {
+          particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.3,
+            vy: (Math.random() - 0.5) * 0.3,
+            r: Math.random() * 2 + 0.8,
+          });
+        }
+      }
+
+      function draw() {
+        ctx!.clearRect(0, 0, canvas.width, canvas.height);
+        const isDark = document.documentElement.classList.contains('dark');
+        const dotColor = isDark ? 'rgba(175,169,236,' : 'rgba(83,74,183,';
+        const lineColor = isDark ? 'rgba(175,169,236,' : 'rgba(83,74,183,';
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+          if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+          ctx!.beginPath();
+          ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx!.fillStyle = dotColor + '0.8)';
+          ctx!.fill();
+
+          for (let j = i + 1; j < particles.length; j++) {
+            const p2 = particles[j];
+            const dx = p.x - p2.x;
+            const dy = p.y - p2.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < maxDist) {
+              ctx!.beginPath();
+              ctx!.moveTo(p.x, p.y);
+              ctx!.lineTo(p2.x, p2.y);
+              ctx!.strokeStyle = lineColor + (0.55 * (1 - dist / maxDist)) + ')';
+              ctx!.lineWidth = 0.8;
+              ctx!.stroke();
+            }
+          }
+        }
+        animationId = requestAnimationFrame(draw);
+      }
+
+      // Respect reduced motion
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        canvas.style.display = 'none';
+        return;
+      }
+
+      resize();
+      createParticles();
+      draw();
+
+      window.addEventListener('resize', () => {
+        cancelAnimationFrame(animationId);
+        resize();
+        createParticles();
+        draw();
+      });
+    }
+
+    initConstellation();
+    document.addEventListener('astro:after-swap', () => {
+      const saved = localStorage.getItem('theme');
+      const theme = saved ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      initConstellation();
+      // Ensure hero animated elements don't get stuck invisible after swap
+      document.querySelectorAll('.animate-fade-in, .animate-fade-in-up').forEach((el) => {
+        (el as HTMLElement).style.opacity = '1';
+        (el as HTMLElement).style.transform = 'none';
+      });
+    });
+  </script>
+
+  <!-- Console easter egg -->
+  <script is:inline>
+    (function() {
+      function s(size, color, bg) {
+        bg = bg || 'transparent';
+        return 'font-size:' + size + 'px;font-weight:700;color:' + color + ';background:' + bg + ';padding:4px 12px;border-radius:6px;';
+      }
+      console.log('%c nullgaro ', s(48, '#AFA9EC', '#0C0C0F'));
+      console.log('%c Hola, curioso/a 👀', s(18, '#5DCAA5'));
+      console.log('%c Estás inspeccionando el código... eres de los nuestros.', s(14, '#F0997B'));
+      console.log('%c 📧  danimilenovvalkov@gmail.com', s(14, '#AFA9EC'));
+      console.log(
+        '%c\n🥚  CHEATSHEET DE EASTER EGGS\n\n' +
+        '  1. Clic en el texto del hero  →  cicla 4 tipos de cursor\n' +
+        '  2. Clic en el hub "N+" de la constelación  →  sube el contador,\n' +
+        '     llega a ∞, luego 404 y desaparecen las burbujas\n' +
+        '  3. Alterna el tema 10 veces seguido rápido  →  modo nyan cat 🌈\n' +
+        '\n  ...y puede que haya alguno más que no está en esta lista ;)\n',
+        s(13, '#E8E6E1', '#13121A')
+      );
+    })();
+  </script>
+
+</body>
+</html>

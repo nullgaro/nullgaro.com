@@ -1,0 +1,481 @@
+---
+interface Props { data: any; }
+const { data } = Astro.props;
+const exp = data.experience;
+
+// ─── Layout constants ────────────────────────────────────────────────────────
+const hubX = 350, hubY = 255;
+const outerR = 200;  // end-destination ring radius
+const innerR = 100;  // staffing-company ring radius (between hub and outer)
+
+// ─── Build node lists ────────────────────────────────────────────────────────
+// outerNodes = end destinations: L2s + direct employers (no subhire)
+// innerNodes = staffing intermediaries: L1s that have subhiredTo
+
+type Node = {
+  id: string; name: string; initials: string; role: string; dates: string;
+  description: string; tech: string[]; color: string;
+  cx: number; cy: number; halfSize: number;
+  parentId?: string; parentName?: string; isStaffing: boolean;
+};
+
+const outerNodes: Node[] = [];
+const innerNodes: Node[] = [];
+
+for (const c of exp.companies) {
+  const isStaffing = Array.isArray(c.subhiredTo) && c.subhiredTo.length > 0;
+  if (isStaffing) {
+    for (const sub of c.subhiredTo) {
+      outerNodes.push({ ...sub, cx: 0, cy: 0, halfSize: 40, parentId: c.id, parentName: c.name, isStaffing: false });
+    }
+    innerNodes.push({ ...c, cx: 0, cy: 0, halfSize: 22, isStaffing: true });
+  } else {
+    outerNodes.push({ ...c, cx: 0, cy: 0, halfSize: 40, isStaffing: false });
+  }
+}
+
+// Total companies count for hub
+const total = exp.companies.length + exp.companies.reduce((s: number, c: any) => s + (c.subhiredTo?.length || 0), 0);
+
+// ─── Compute outer positions (evenly spaced circle) ──────────────────────────
+const n = outerNodes.length;
+for (let i = 0; i < n; i++) {
+  const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+  outerNodes[i].cx = hubX + Math.cos(angle) * outerR;
+  outerNodes[i].cy = hubY + Math.sin(angle) * outerR;
+}
+
+// ─── Compute inner positions (average angle of their L2 children) ─────────────
+for (const inner of innerNodes) {
+  const childIndices = outerNodes
+    .map((node, i) => (node.parentId === inner.id ? i : -1))
+    .filter(i => i >= 0);
+  const avgIdx = childIndices.reduce((s, i) => s + i, 0) / childIndices.length;
+  const angle = (avgIdx / n) * Math.PI * 2 - Math.PI / 2;
+  inner.cx = hubX + Math.cos(angle) * innerR;
+  inner.cy = hubY + Math.sin(angle) * innerR;
+}
+
+// ─── Float animation params (subtle, different per node) ──────────────────────
+const floatParams = [
+  { dx: 2,  dy: -5, dur: 5.0, del: 0    },
+  { dx: -3, dy: -4, dur: 4.6, del: -1.8 },
+  { dx: 3,  dy: -6, dur: 5.4, del: -0.9 },
+  { dx: -2, dy: -4, dur: 4.9, del: -2.4 },
+  { dx: 4,  dy: -5, dur: 5.2, del: -1.3 },
+  { dx: -2, dy: -4, dur: 4.7, del: -0.5 },
+  { dx: 1,  dy: -2, dur: 6.1, del: -1.5 },
+  { dx: -1, dy: -3, dur: 5.9, del: -2.0 },
+  { dx: 2,  dy: -2, dur: 6.3, del: -0.7 },
+];
+const fp = (i: number) => floatParams[i % floatParams.length];
+
+// ─── Pre-compute SVG lines ───────────────────────────────────────────────────
+type Line = { x1: number; y1: number; x2: number; y2: number; type: 'direct' | 'staffing-hub' | 'via'; mx?: number; my?: number; };
+const lines: Line[] = [];
+
+// Hub → direct outer nodes
+for (const node of outerNodes.filter(n => !n.parentId)) {
+  lines.push({ x1: hubX, y1: hubY, x2: node.cx, y2: node.cy, type: 'direct' });
+}
+
+// Hub → inner staffing nodes
+for (const inner of innerNodes) {
+  lines.push({ x1: hubX, y1: hubY, x2: inner.cx, y2: inner.cy, type: 'staffing-hub' });
+}
+
+// Inner staffing → their L2 outer nodes
+for (const node of outerNodes.filter(n => n.parentId)) {
+  const parent = innerNodes.find(n => n.id === node.parentId);
+  if (parent) {
+    lines.push({
+      x1: parent.cx, y1: parent.cy, x2: node.cx, y2: node.cy, type: 'via',
+      mx: (parent.cx + node.cx) / 2, my: (parent.cy + node.cy) / 2,
+    });
+  }
+}
+---
+
+<section id="experience" class="section-spacing relative">
+  <div class="section-container">
+    <!-- Section header -->
+    <div class="text-center mb-16" data-animate>
+      <h2 class="font-display text-section gradient-text inline-block">{exp.title}</h2>
+      <p class="mt-3 text-gray-500 dark:text-gray-400">{exp.subtitle}</p>
+    </div>
+
+    <!-- Desktop: Constellation -->
+    <div class="hidden md:block relative" data-animate>
+      <div id="constellation-container" class="relative mx-auto" style="height: 530px; max-width: 700px;">
+
+        <!-- SVG lines (pre-computed, drawn at build time) -->
+        <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 700 530" fill="none" preserveAspectRatio="xMidYMid meet">
+          {lines.map(l => (
+            <>
+              {l.type === 'direct' && (
+                <line x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                  stroke="var(--color-accent)" stroke-width="1" opacity="0.3" />
+              )}
+              {l.type === 'staffing-hub' && (
+                <line x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                  stroke="var(--color-accent)" stroke-width="0.7" stroke-dasharray="3 5" opacity="0.2" />
+              )}
+              {l.type === 'via' && (
+                <line x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                  stroke="var(--color-warm)" stroke-width="1.2" stroke-dasharray="5 3" opacity="0.5" />
+              )}
+            </>
+          ))}
+        </svg>
+
+        <!-- Central hub -->
+        <div class="absolute z-20" style={`left: ${hubX - 52}px; top: ${hubY - 52}px;`}>
+          <div class="relative">
+            <div class="absolute inset-0 rounded-full bg-accent-400/20 blur-xl animate-pulse-glow"></div>
+            <div id="hub-btn" class="w-[104px] h-[104px] rounded-full bg-gradient-to-br from-accent-400 to-accent-600 dark:from-accent-200 dark:to-accent-400 flex flex-col items-center justify-center shadow-xl shadow-accent-400/20 cursor-pointer select-none relative transition-transform duration-150 active:scale-95">
+              <span id="hub-count" class="text-2xl font-display font-bold text-white dark:text-surface-dark">{total}+</span>
+              <span id="hub-label" class="text-[10px] font-medium text-white/80 dark:text-surface-dark/70 uppercase tracking-wider">{exp.hubLabel}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Outer nodes: end destinations (big, solid, full opacity) -->
+        {outerNodes.map((node, i) => {
+          const f = fp(i);
+          return (
+            <div
+              class="constellation-bubble absolute z-10 cursor-pointer group"
+              style={`left: ${node.cx - 40}px; top: ${node.cy - 40}px;`}
+              data-company-id={node.id}
+              data-cx={node.cx}
+              data-cy={node.cy}
+            >
+              <!-- Floating wrapper -->
+              <div style={`animation: floatBubble ${f.dur}s ease-in-out infinite; animation-delay: ${f.del}s; --fx: ${f.dx}px; --fy: ${f.dy}px;`}>
+                <!-- Glow ring on hover -->
+                <div class="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md"
+                  style={`background: ${node.color}33;`}></div>
+                <!-- Bubble -->
+                <div class="w-20 h-20 rounded-full border-2 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-lg relative"
+                  style={`border-color: ${node.color}; background: var(--color-bg-card); box-shadow: 0 4px 20px ${node.color}25;`}>
+                  <span class="font-display font-bold text-sm" style={`color: ${node.color};`}>{node.initials}</span>
+                </div>
+              </div>
+              <!-- Label -->
+              <div class="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none">
+                <span class="text-[11px] font-medium text-gray-600 dark:text-gray-300">{node.name}</span>
+              </div>
+            </div>
+          );
+        })}
+
+        <!-- Inner nodes: staffing intermediaries (small, dashed, dimmed) -->
+        {innerNodes.map((node, i) => {
+          const f = fp(outerNodes.length + i);
+          return (
+            <div
+              class="constellation-bubble absolute z-5 cursor-pointer group"
+              style={`left: ${node.cx - 22}px; top: ${node.cy - 22}px;`}
+              data-company-id={node.id}
+              data-cx={node.cx}
+              data-cy={node.cy}
+            >
+              <div style={`animation: floatBubble ${f.dur}s ease-in-out infinite; animation-delay: ${f.del}s; --fx: ${f.dx}px; --fy: ${f.dy}px;`}>
+                <div class="w-11 h-11 rounded-full border border-dashed flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:opacity-80"
+                  style={`border-color: ${node.color}; background: var(--color-bg-card); opacity: 0.45;`}>
+                  <span class="font-display font-bold text-[9px]" style={`color: ${node.color};`}>{node.initials}</span>
+                </div>
+              </div>
+              <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none opacity-50">
+                <span class="text-[9px] text-gray-500 dark:text-gray-500">{node.name}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    <!-- Detail card -->
+    <div id="company-detail" class="hidden mt-8 w-full max-w-md mx-auto z-30">
+      <div class="card p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div id="detail-avatar" class="w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0">
+            <span id="detail-initials" class="font-display font-bold text-sm"></span>
+          </div>
+          <div>
+            <h3 id="detail-name" class="font-display font-semibold text-base"></h3>
+            <p id="detail-role" class="text-sm text-gray-500 dark:text-gray-400"></p>
+          </div>
+        </div>
+        <p id="detail-desc" class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-2"></p>
+        <div id="detail-via" class="hidden text-xs text-warm-600 dark:text-warm-200 font-medium"></div>
+      </div>
+    </div>
+
+    <!-- Mobile: Bubble grid -->
+    <div class="md:hidden" data-animate>
+      <!-- Hub bubble -->
+      <div class="flex justify-center mb-8">
+        <div class="relative">
+          <div class="absolute inset-0 rounded-full bg-accent-400/20 blur-lg animate-pulse-glow"></div>
+          <div id="hub-btn-m" class="relative w-24 h-24 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 dark:from-accent-200 dark:to-accent-400 flex flex-col items-center justify-center shadow-xl shadow-accent-400/20 cursor-pointer select-none active:scale-95 transition-transform">
+            <span id="hub-count-m" class="text-xl font-display font-bold text-white dark:text-surface-dark">{total}+</span>
+            <span id="hub-label-m" class="text-[10px] font-medium text-white/80 dark:text-surface-dark/70 uppercase tracking-wider">{exp.hubLabel}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2-column bubble grid (outer nodes only) -->
+      <div class="grid grid-cols-2 gap-x-4 gap-y-8">
+        {outerNodes.map((node, i) => {
+          const f = fp(i);
+          return (
+            <div
+              class="constellation-bubble flex flex-col items-center cursor-pointer group"
+              data-company-id={node.id}
+              data-cx={0}
+              data-cy={0}
+            >
+              <div style={`animation: floatBubble ${f.dur}s ease-in-out infinite; animation-delay: ${f.del}s; --fx: ${f.dx}px; --fy: ${f.dy}px;`}>
+                <div class="relative">
+                  <div class="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md"
+                    style={`background: ${node.color}33;`}></div>
+                  <div class="w-20 h-20 rounded-full border-2 flex items-center justify-center transition-transform duration-300 group-active:scale-95 shadow-lg relative"
+                    style={`border-color: ${node.color}; background: var(--color-bg-card); box-shadow: 0 4px 20px ${node.color}25;`}>
+                    <span class="font-display font-bold text-sm" style={`color: ${node.color};`}>{node.initials}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-2 text-center">
+                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 leading-tight">{node.name}</p>
+                {node.parentName && (
+                  <span class="text-[10px] text-gray-400 dark:text-gray-500 font-mono">via {node.parentName}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <!-- Mobile detail card -->
+      <div id="company-detail-mobile" class="hidden mt-6">
+        <div class="card p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div id="detail-avatar-m" class="w-9 h-9 rounded-full border-2 flex items-center justify-center flex-shrink-0">
+              <span id="detail-initials-m" class="font-display font-bold text-xs"></span>
+            </div>
+            <div>
+              <h3 id="detail-name-m" class="font-display font-semibold text-sm"></h3>
+              <p id="detail-role-m" class="text-xs text-gray-500 dark:text-gray-400"></p>
+            </div>
+          </div>
+          <p id="detail-desc-m" class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-2"></p>
+          <div id="detail-via-m" class="hidden text-xs text-warm-600 dark:text-warm-200 font-medium"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  @keyframes floatBubble {
+    0%, 100% { transform: translate(0, 0); }
+    33%       { transform: translate(var(--fx, 2px), var(--fy, -4px)); }
+    66%       { transform: translate(calc(var(--fx, 2px) * -0.6), calc(var(--fy, -4px) * 0.5)); }
+  }
+  @keyframes hub404Pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    50%       { box-shadow: 0 0 0 16px rgba(239, 68, 68, 0.45); }
+  }
+  .hub-404-pulse { animation: hub404Pulse 0.5s ease-out forwards !important; }
+</style>
+
+<script define:vars={{ outerNodes, innerNodes, total }}>
+  if (window._hubClicks === undefined) window._hubClicks = 0;
+
+  function initConstellation() {
+    const detailCard = document.getElementById('company-detail');
+    if (!detailCard) return;
+
+    // ── Lookup map ───────────────────────────────────────────────────────────
+    const nodeMap = {};
+    for (const n of outerNodes) nodeMap[n.id] = n;
+    for (const n of innerNodes) nodeMap[n.id] = n;
+
+    // ── Hub easter egg ───────────────────────────────────────────────────────
+    const hubBtn   = document.getElementById('hub-btn');
+    const hubCount = document.getElementById('hub-count');
+    const hubLabel = document.getElementById('hub-label');
+    const container = document.getElementById('constellation-container');
+
+    const hubBtnM   = document.getElementById('hub-btn-m');
+    const hubCountM = document.getElementById('hub-count-m');
+    const hubLabelM = document.getElementById('hub-label-m');
+
+    if (hubLabel && !hubLabel.dataset.original) {
+      hubLabel.dataset.original = hubLabel.textContent;
+    }
+    if (hubLabelM && !hubLabelM.dataset.original) {
+      hubLabelM.dataset.original = hubLabelM.textContent;
+    }
+
+    function setHubText(count, label) {
+      if (hubCount) hubCount.textContent = count;
+      if (hubLabel) hubLabel.textContent = label;
+      if (hubCountM) hubCountM.textContent = count;
+      if (hubLabelM) hubLabelM.textContent = label;
+    }
+
+    function applyHubState() {
+      const clicks = window._hubClicks;
+      const origLabel = hubLabel?.dataset.original || hubLabelM?.dataset.original || '';
+      if (clicks === 0) {
+        setHubText(total + '+', origLabel);
+        if (hubBtn) hubBtn.style.background = '';
+        if (hubBtnM) hubBtnM.style.background = '';
+        document.querySelectorAll('.constellation-bubble').forEach(b => { b.style.opacity = ''; b.style.transition = ''; });
+        if (container) container.querySelectorAll('svg line').forEach(el => { el.style.opacity = ''; });
+      } else if (clicks <= 90) {
+        setHubText((total + clicks) + '+', origLabel);
+      } else if (clicks === 91) {
+        setHubText('∞', '∞');
+      } else if (clicks === 92) {
+        setHubText('404', 'not found');
+        const redBg = 'linear-gradient(135deg, #ef4444, #b91c1c)';
+        if (hubBtn) hubBtn.style.background = redBg;
+        if (hubBtnM) hubBtnM.style.background = redBg;
+        document.querySelectorAll('.constellation-bubble').forEach(b => { b.style.transition = 'opacity 0.6s'; b.style.opacity = '0'; });
+        if (container) container.querySelectorAll('svg line').forEach(el => { el.style.transition = 'opacity 0.6s'; el.style.opacity = '0'; });
+      } else {
+        [hubBtn, hubBtnM].forEach(btn => {
+          if (!btn) return;
+          btn.classList.add('hub-404-pulse');
+          setTimeout(() => btn.classList.remove('hub-404-pulse'), 500);
+        });
+        return;
+      }
+    }
+
+    applyHubState();
+
+    function onHubClick(e) {
+      e.stopPropagation();
+      window._hubClicks = (window._hubClicks || 0) + 1;
+      applyHubState();
+    }
+
+    if (hubBtn) hubBtn.onclick = onHubClick;
+    if (hubBtnM) hubBtnM.onclick = onHubClick;
+
+    // ── Desktop bubbles ──────────────────────────────────────────────────────
+    const bubbles = document.querySelectorAll('#constellation-container .constellation-bubble');
+
+    bubbles.forEach(bubble => {
+      bubble.onclick = (e) => {
+        e.stopPropagation();
+        const id = bubble.getAttribute('data-company-id');
+        const node = nodeMap[id];
+        if (!node) return;
+
+        document.getElementById('detail-name').textContent = node.name;
+        document.getElementById('detail-role').textContent = node.role;
+        document.getElementById('detail-desc').textContent = node.description;
+        document.getElementById('detail-initials').textContent = node.initials;
+
+        const avatar = document.getElementById('detail-avatar');
+        if (avatar) {
+          avatar.style.borderColor = node.color;
+          document.getElementById('detail-initials').style.color = node.color;
+        }
+
+        const viaEl = document.getElementById('detail-via');
+        if (viaEl) {
+          if (node.parentName) {
+            viaEl.textContent = '↳ via ' + node.parentName;
+            viaEl.classList.remove('hidden');
+          } else {
+            viaEl.classList.add('hidden');
+          }
+        }
+
+        if (window.innerWidth >= 768) {
+          detailCard.classList.remove('hidden');
+          detailCard.classList.add('visible');
+        }
+
+        bubbles.forEach(b => {
+          const inner = b.querySelector('div');
+          if (inner) inner.style.opacity = '0.35';
+        });
+        const myInner = bubble.querySelector('div');
+        if (myInner) myInner.style.opacity = '1';
+      };
+    });
+
+    // Deselect on container background — only fires if click wasn't stopped
+    if (container) {
+      container.onclick = () => {
+        detailCard.classList.add('hidden');
+        bubbles.forEach(b => {
+          const inner = b.querySelector('div');
+          if (inner) inner.style.opacity = '';
+        });
+      };
+    }
+
+    // ── Mobile bubbles ───────────────────────────────────────────────────────
+    const mobileDetail = document.getElementById('company-detail-mobile');
+
+    // Remove old document click-outside listener before adding new one
+    if (window._mobileClickOutside) {
+      document.removeEventListener('click', window._mobileClickOutside);
+    }
+
+    if (mobileDetail) {
+      window._mobileClickOutside = (e) => {
+        if (!mobileDetail.classList.contains('hidden')) {
+          const t = e.target;
+          if (!mobileDetail.contains(t) && !t.closest('.constellation-bubble')) {
+            mobileDetail.classList.add('hidden');
+          }
+        }
+      };
+      document.addEventListener('click', window._mobileClickOutside);
+
+      document.querySelectorAll('.md\\:hidden .constellation-bubble').forEach(bubble => {
+        bubble.onclick = (e) => {
+          e.stopPropagation();
+          const id = bubble.getAttribute('data-company-id');
+          const node = nodeMap[id];
+          if (!node) return;
+
+          document.getElementById('detail-name-m').textContent = node.name;
+          document.getElementById('detail-role-m').textContent = node.role;
+          document.getElementById('detail-desc-m').textContent = node.description;
+          document.getElementById('detail-initials-m').textContent = node.initials;
+
+          const avatarM = document.getElementById('detail-avatar-m');
+          if (avatarM) {
+            avatarM.style.borderColor = node.color;
+            document.getElementById('detail-initials-m').style.color = node.color;
+          }
+
+          const viaM = document.getElementById('detail-via-m');
+          if (viaM) {
+            if (node.parentName) {
+              viaM.textContent = '↳ via ' + node.parentName;
+              viaM.classList.remove('hidden');
+            } else {
+              viaM.classList.add('hidden');
+            }
+          }
+
+          mobileDetail.classList.remove('hidden');
+        };
+      });
+    }
+  }
+
+  initConstellation();
+  document.addEventListener('astro:after-swap', initConstellation);
+</script>

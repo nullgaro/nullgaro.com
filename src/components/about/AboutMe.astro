@@ -1,0 +1,85 @@
+---
+interface Props { data: any; }
+const { data } = Astro.props;
+const a = data.about;
+---
+<section id="about" class="section-spacing relative">
+  <div class="section-container">
+    <!-- Section header -->
+    <div class="text-center mb-16" data-animate>
+      <h2 class="font-display text-section gradient-text inline-block">{a.title}</h2>
+    </div>
+
+    <div class="max-w-2xl mx-auto flex flex-col gap-10">
+      <!-- Bio (inspired by original portfolio formatting) -->
+      <div class="space-y-4 text-base leading-relaxed text-center" data-animate>
+        <p class="text-gray-600 dark:text-gray-300">
+          {a.bioLines[0]}
+        </p>
+        <p class="text-gray-600 dark:text-gray-300">
+          {a.bioLines[1]}
+        </p>
+        <p class="text-gray-600 dark:text-gray-300">
+          {a.bioLines[2]}
+          {' '}
+          <span class="text-accent-400 dark:text-accent-200 font-medium">{a.bioHighlights[0]}</span>
+          {', '}
+          <span class="text-accent-400 dark:text-accent-200 font-medium">{a.bioHighlights[1]}</span>
+          {' y '}
+          <span class="text-accent-400 dark:text-accent-200 font-medium">{a.bioHighlights[2]}</span>
+          {'.'}
+        </p>
+      </div>
+
+      <!-- Terminal -->
+      <div class="rounded-2xl overflow-hidden border border-[var(--color-border)] shadow-xl" data-animate>
+        <!-- Title bar -->
+        <div class="flex items-center gap-1.5 px-4 py-3 border-b border-[var(--color-border)]"
+          style="background: var(--color-bg-elevated);">
+          <div class="w-3 h-3 rounded-full bg-red-400/70"></div>
+          <div class="w-3 h-3 rounded-full bg-yellow-400/70"></div>
+          <div class="w-3 h-3 rounded-full bg-green-400/70"></div>
+          <span class="ml-3 text-[11px] font-mono text-gray-400 dark:text-gray-500">about.sh</span>
+        </div>
+
+        <!-- Terminal body -->
+        <div class="p-6 font-mono text-sm leading-7" style="background: var(--color-bg-card);">
+
+          <!-- echo -->
+          <div>
+            <span class="text-emerald-500 dark:text-emerald-400">❯</span>
+            <span class="text-gray-400 dark:text-gray-500 ml-2">echo $USER && echo $NAME</span>
+          </div>
+          <div class="ml-4 mb-4 space-y-0.5">
+            <div class="text-accent-400 dark:text-accent-200 font-semibold">nullgaro</div>
+            <div class="text-gray-600 dark:text-gray-300">Daniel Milenov</div>
+          </div>
+
+          <!-- cat about.json -->
+          <div>
+            <span class="text-emerald-500 dark:text-emerald-400">❯</span>
+            <span class="text-gray-400 dark:text-gray-500 ml-2">cat about.json</span>
+          </div>
+          <div class="ml-4 mb-4">
+            <div class="text-gray-500 dark:text-gray-400">{"{"}</div>
+            {a.cards.map((card: any, i: number) => (
+              <div class="ml-4">
+                <span class="text-accent-400 dark:text-accent-200">"{card.label}"</span>
+                <span class="text-gray-500 dark:text-gray-400">: </span>
+                <span class="text-emerald-600 dark:text-emerald-300">"{card.value}"</span>
+                {i < a.cards.length - 1 && <span class="text-gray-500 dark:text-gray-400">,</span>}
+              </div>
+            ))}
+            <div class="text-gray-500 dark:text-gray-400">{"}"}</div>
+          </div>
+
+          <!-- Cursor -->
+          <div class="flex items-center gap-2">
+            <span class="text-emerald-500 dark:text-emerald-400">❯</span>
+            <span class="inline-block w-2 h-4 bg-accent-400 dark:bg-accent-200 animate-pulse ml-1"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,35 @@
+---
+import { getCollection } from 'astro:content';
+import BlogPreview from '../../../components/blog/BlogPreview.astro';
+import BlogLayout from '../../../layouts/BlogLayout.astro';
+import enData from '@data/en.json';
+
+const lang = 'en';
+const allPosts = await getCollection('blogEn');
+const sortedPosts = allPosts.sort((a, b) =>
+  new Date(b.data.pubDate).getTime() - new Date(a.data.pubDate).getTime()
+);
+const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags ?? []))];
+---
+<BlogLayout lang={lang} title={enData.blog.title} description={enData.blog.description} tags={allTags}>
+  <ul class="w-full">
+    {sortedPosts.map((post) => {
+      const pubDate = new Date(post.data.pubDate).toLocaleDateString('en-GB');
+      const updDate = post.data.updDate
+        ? new Date(post.data.updDate).toLocaleDateString('en-GB')
+        : null;
+      return (
+        <BlogPreview
+          url={`/en/blog/${post.id}`}
+          title={post.data.title}
+          description={post.data.description}
+          pubDate={pubDate}
+          updDate={updDate}
+          image={post.data.image}
+          tags={post.data.tags}
+          lang={lang}
+        />
+      );
+    })}
+  </ul>
+</BlogLayout>

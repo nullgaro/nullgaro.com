@@ -1,0 +1,27 @@
+---
+import { getCollection } from 'astro:content';
+import BlogLayout from '../../../../layouts/BlogLayout.astro';
+import enData from '@data/en.json';
+
+const lang = 'en';
+const blog = enData.blog;
+const allPosts = await getCollection('blogEn');
+const tags = [...new Set(allPosts.flatMap((p) => p.data.tags ?? []))];
+---
+<BlogLayout lang={lang} title={`Tags — ${blog.title}`}>
+  <h2 class="font-display text-2xl font-semibold mb-8">Tags</h2>
+  <div class="flex flex-wrap gap-3">
+    {tags.map((tag) => {
+      const count = allPosts.filter((p) => p.data.tags?.includes(tag)).length;
+      return (
+        <a
+          href={`/en/blog/tags/${tag}`}
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--color-border)] hover:border-accent-400/40 dark:hover:border-accent-200/40 hover:text-accent-400 dark:hover:text-accent-200 transition-all text-sm"
+        >
+          {tag}
+          <span class="text-xs text-accent-400 dark:text-accent-200 font-mono">{count}</span>
+        </a>
+      );
+    })}
+  </div>
+</BlogLayout>

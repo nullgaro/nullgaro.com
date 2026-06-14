@@ -1,0 +1,3 @@
+[submodule "blog-posts"]
+	path = blog-posts
+	url = git@git.nullgaro.com:nullgaro/blog-posts.git
