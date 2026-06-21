@@ -27,7 +27,9 @@ const langPath = lang === 'es' ? '/en/' : '/';
       <a href="#projects" class="nav-link text-sm text-gray-600 dark:text-gray-400 hover:text-accent-400 dark:hover:text-accent-200 transition-colors">{nav.projects}</a>
       <a href="#about" class="nav-link text-sm text-gray-600 dark:text-gray-400 hover:text-accent-400 dark:hover:text-accent-200 transition-colors">{nav.about}</a>
       <a href="#contact" class="nav-link text-sm text-gray-600 dark:text-gray-400 hover:text-accent-400 dark:hover:text-accent-200 transition-colors">{nav.contact}</a>
+      {/* Blog oculto del nav (temporal) — las páginas siguen existiendo, solo sin enlazar. Descomentar para restaurar.
       <a href={lang === 'en' ? '/en/blog' : '/blog'} class="text-sm text-gray-600 dark:text-gray-400 hover:text-accent-400 dark:hover:text-accent-200 transition-colors">{nav.blog}</a>
+      */}
     </nav>
 
     <!-- Actions -->
@@ -94,10 +96,12 @@ const langPath = lang === 'es' ? '/en/' : '/';
         <span class="w-1.5 h-1.5 rounded-full bg-accent-400/40 dark:bg-accent-200/40 group-hover:bg-accent-400 dark:group-hover:bg-accent-200 transition-colors flex-shrink-0"></span>
         {nav.contact}
       </a>
+      {/* Blog oculto del nav (temporal) — descomentar para restaurar.
       <a href={lang === 'en' ? '/en/blog' : '/blog'} class="mobile-nav-link group flex items-center gap-3 px-3 py-3.5 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:text-accent-400 dark:hover:text-accent-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all mb-1">
         <span class="w-1.5 h-1.5 rounded-full bg-accent-400/40 dark:bg-accent-200/40 group-hover:bg-accent-400 dark:group-hover:bg-accent-200 transition-colors flex-shrink-0"></span>
         {nav.blog}
       </a>
+      */}
     </nav>
 
     <!-- Drawer footer: theme + lang -->
